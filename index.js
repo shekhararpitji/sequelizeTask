@@ -1,27 +1,11 @@
 const express = require("express");
+const cookieparser = require('cookie-parser'); 
+const pass = require('./config/passport.config')
 require('dotenv').config();
-const passport = require('passport');
-const session = require('express-session');
 const app = express();
-
+pass(app);
 app.use(express.json());
-
-app.use(passport.initialize());
-app.use(session({
-  secret: process.env.SECRET,
-  resave: false,
-  saveUninitialized: true
-}));
-app.use(passport.session());
-passport.serializeUser(function(user, done) {
-  done(null, user.id);
-});
-
-passport.deserializeUser(function(id, done) {
-  User.findById(id, function(err, user) {
-    done(err, user);
-  });
-});
+app.use(cookieparser()); 
 app.use('/user',require('./routes/userRoutes'));
 
 app.listen(process.env.PORT, () => {

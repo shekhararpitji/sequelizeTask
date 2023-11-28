@@ -41,4 +41,6 @@ router.post(
   userController.registerCtrl
 );
 
+router.post('/refresh',userController.refresh)
+
 module.exports = router;
