@@ -1,23 +1,20 @@
 const { validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
- const {User,Address,Token} = require("../models");
+const { User, Address, Token } = require("../models");
 const bcrypt = require("bcryptjs");
 const { Op } = require("sequelize");
+const randtoken = require("rand-token");
+const {redis,client} = require("../config/redis.config");
+const itemsPerPage = require('../constants/constant')
 
 exports.loginCtrl = async (req, res) => {
-  // const errors = validationResult(req);
-
-  // if (!errors.isEmpty()) {
-  //   return res.status(400).json({ errors: errors.array() });
-  // }
   const { username } = req.body;
-
   try {
-   const user=await User.findOne({
+    const user = await User.findOne({
       where: {
         username,
       },
-    })
+    });
     if (!user) {
       return res.status(401).json({ message: "username not found" });
     }
@@ -27,17 +24,12 @@ exports.loginCtrl = async (req, res) => {
         userId: user.id,
       },
       process.env.SECRET,
-      { expiresIn: "59m" }
+      { expiresIn: "15m" }
     );
-
-    const userToken =await Token.create({
-     
-     userId:user.id,
-     access_token
-      
-    });
-
-    res.status(200).json(userToken);
+    let refreshToken = randtoken.uid(256);
+    await client.set(refreshToken, username);
+    res.cookie("refreshToken", refreshToken,{secure:true, httpOnly:true} )
+    res.status(200).json({ jwt: access_token});
   } catch (error) {
     console.error(error);
     res.status(500).send("Server Error");
@@ -57,13 +49,13 @@ exports.registerCtrl = async (req, res) => {
 
   try {
     await User.create({
-      userName  ,
-     password: hashpassword,
+      userName,
+      password: hashpassword,
       email,
       firstName,
       lastName,
     });
-   
+
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     console.error(error);
@@ -73,8 +65,8 @@ exports.registerCtrl = async (req, res) => {
 
 exports.deleteCtrl = async (req, res) => {
   try {
-    const access_token=req.headers.access_token;
-    const user = await User.destroy({where:{ id:access_token }});
+    const access_token = req.headers.access_token;
+    const user = await User.destroy({ where: { id: access_token } });
 
     res.status(200).json({ user });
   } catch (error) {
@@ -85,7 +77,7 @@ exports.deleteCtrl = async (req, res) => {
 
 exports.getAllCtrl = async (req, res) => {
   try {
-    const user = await User.findAll();
+    const user = await User.findAll({ include: "addresses" });
     res.status(200).send(user);
   } catch (error) {
     console.error(error);
@@ -95,10 +87,9 @@ exports.getAllCtrl = async (req, res) => {
 
 exports.listController = async (req, res) => {
   const page = parseInt(req.params.page);
-  const startIndex = page * 10 - 10;
-  const endIndex = page * 10;
+  const startIndex = page * itemsPerPage - itemsPerPage;
+  const endIndex = page * itemsPerPage;
   try {
-
     const data = await User.findAll();
     const printUsers = data.slice(startIndex, endIndex);
     res.status(200).json({ users: printUsers });
@@ -108,20 +99,30 @@ exports.listController = async (req, res) => {
   }
 };
 
+exports.refresh = async (req,res) => {
+
+}
+
 exports.addressCtrl = async (req, res) => {
   try {
     const access_token = req.get("authorization").split(" ")[1];
-    const userToken = await Token.findOne({ where: { access_token: access_token } });
-    const { address, state, pin_code, phone_no } = req.body;
-    await Address.create({
-      userId: userToken.userId,
-      address,
-      state,
-      pin_code,
-      phone_no,
+    const userToken = await Token.findOne({
+      where: { access_token: access_token },
     });
-
-
+    const { address, state, pin_code, phone_no } = req.body;
+    const Creator = Address.belongsTo(User, { as: "addresses" });
+    await Address.create(
+      {
+        userId: userToken.userId,
+        address,
+        state,
+        pin_code,
+        phone_no,
+      },
+      {
+        include: [Creator],
+      }
+    );
 
     res.status(200).json({ message: "Address saved", data: address });
   } catch (error) {
@@ -133,7 +134,10 @@ exports.addressCtrl = async (req, res) => {
 exports.addressListController = async (req, res) => {
   const userId = req.params.id;
   try {
-    const address = await User.findAll({where:{ id: userId },include:Address});
+    const address = await User.findAll({
+      where: { id: userId },
+      include: Address,
+    });
 
     if (!address) {
       return res.status(404).json({ message: "Address not found" });
@@ -142,15 +146,13 @@ exports.addressListController = async (req, res) => {
     res.status(200).json({ address });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(400).json({ message: "Internal server error" });
   }
 };
 
 exports.deleteAddressCtrl = async (req, res) => {
   try {
     const addressIds = req.body.addressIds;
-    // const user = req.userId;
-
     if (!addressIds || !Array.isArray(addressIds)) {
       return res.status(400).json({ error: "Invalid request format" });
     }
