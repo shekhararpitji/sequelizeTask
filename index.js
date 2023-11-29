@@ -1,12 +1,13 @@
 const express = require("express");
-const cookieparser = require('cookie-parser'); 
-const pass = require('./config/passport.config')
-require('dotenv').config();
+const cookieparser = require("cookie-parser");
+const { redis } = require("./config/redis.config");
+require("dotenv").config();
+redis();
 const app = express();
-pass(app);
 app.use(express.json());
-app.use(cookieparser()); 
-app.use('/user',require('./routes/userRoutes'));
+app.use(cookieparser());
+app.use("/user", require("./routes/userRoutes"));
+app.use("/address", require("./routes/addressRoutes"));
 
 app.listen(process.env.PORT, () => {
   console.log(`Server is running on http://localhost:${process.env.PORT}`);
