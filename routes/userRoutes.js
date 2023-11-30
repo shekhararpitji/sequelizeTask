@@ -4,16 +4,19 @@ const userController = require("../controllers/userController");
 
 const router = express.Router();
 
-router.put("/delete", jwtVerify.authMiddle, userController.deleteCtrl);
+router.post("/register", userController.registerCtrl);
+
+router.post("/login", userController.loginCtrl);
 
 router.get("/get", jwtVerify.authMiddle, userController.getAllCtrl);
 
 router.get("/list/:page", jwtVerify.authMiddle, userController.listController);
 
+router.put("/delete", jwtVerify.authMiddle, userController.deleteCtrl);
+
 router.post("/refresh", userController.refresh);
 
-router.post("/login", userController.loginCtrl);
+router.use("/address", require("./addressRoutes"));
 
-router.post("/register", userController.registerCtrl);
 
 module.exports = router;

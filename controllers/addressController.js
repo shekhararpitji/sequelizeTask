@@ -7,7 +7,6 @@ const {
 exports.addressController = async (req, res) => {
   try {
     const address = await addressService(req);
-
     res.status(200).json({ message: "Address saved", data: address });
   } catch (error) {
     console.error(error);
@@ -17,7 +16,7 @@ exports.addressController = async (req, res) => {
 
 exports.addressListController = async (req, res) => {
   try {
-    const address =await addressListService(req);
+    const address = await addressListService(req);
     if (!address) {
       return res.status(404).json({ message: "Address not found" });
     }
@@ -33,7 +32,7 @@ exports.deleteAddressController = async (req, res) => {
     await deleteAddressService(req);
     res.json({ message: "Addresses deleted successfully" });
   } catch (error) {
-    console.log(error);
+    console.error(error.message);
     return res.status(500).json({ message: "Server Error" });
   }
 };
