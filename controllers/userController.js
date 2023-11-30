@@ -1,23 +1,11 @@
 const {
   loginService,
   registerService,
-  listService
+  listService,
 } = require("../services/user.services");
 const { client } = require("../config/redis.config");
-const { User} = require("../models");
-
-
-exports.loginCtrl = async (req, res) => {
-  
-  try {
-    const { access_token, refreshToken } =await loginService(req);
-    res.cookie("refreshToken", refreshToken, { secure: true, httpOnly: true });
-    res.status(200).json({ jwt: access_token, refreshToken: refreshToken });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Server Error");
-  }
-};
+const { User } = require("../models");
+const { validateToken } = require("../utils/authUtil");
 
 exports.registerCtrl = async (req, res) => {
   try {
@@ -29,25 +17,24 @@ exports.registerCtrl = async (req, res) => {
   }
 };
 
-exports.deleteCtrl = async (req, res) => {
+exports.loginCtrl = async (req, res) => {
   try {
-    const access_token = req.headers.access_token;
-    const user = await User.destroy({ where: { id: access_token } });
-
-    res.status(200).json({ user });
+    const { access_token, refreshToken } = await loginService(req, res);
+    res.cookie("refreshToken", refreshToken, { secure: true, httpOnly: true });
+    res.status(200).json({ jwt: access_token, refreshToken: refreshToken });
   } catch (error) {
     console.error(error);
-    res.status(400).send("Server Error");
+    res.status(500).send("Server Error");
   }
 };
 
 exports.getAllCtrl = async (req, res) => {
   try {
     const user = await User.findAll({ include: "addresses" });
-    if(!user){
-     return res.status(400).send({message:"user not found"});
+    if (!user) {
+      return res.status(400).send({ message: "user not found" });
     }
-    res.status(200).send({user});
+    res.status(200).send({ user });
   } catch (error) {
     console.error(error);
     res.status(500).send("Server Error");
@@ -56,11 +43,23 @@ exports.getAllCtrl = async (req, res) => {
 
 exports.listController = async (req, res) => {
   try {
-    const printUsers =await listService(req);
+    const printUsers = await listService(req);
     res.status(200).json({ users: printUsers });
   } catch (error) {
     console.error(error);
     res.status(500).send("Server Error");
+  }
+};
+
+exports.deleteCtrl = async (req, res) => {
+  try {
+    const access_token =await validateToken(req);
+    const user = await User.destroy({ where: { id: access_token.id } });
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error(error);
+    res.status(400).send("Server Error");
   }
 };
 
@@ -75,9 +74,3 @@ exports.refresh = async (req, res) => {
     res.status(400).send({ message: "invalid refreshToken" });
   }
 };
-
-
-
-
-
-

@@ -1,16 +1,21 @@
-const { User, Address, Token } = require("../models");
+const { User, Address } = require("../models");
 const { Op } = require("sequelize");
+const { validateToken } = require("../utils/authUtil");
 
 
 exports.addressService = async (req) => {
     try {
-      const access_token = req.get("authorization").split(" ")[1];
-      
-      const { address, state, pin_code, phone_no } = req.body;
+      const {email} =await validateToken(req); 
+      const user = await User.findOne({
+        where: {
+          email,
+        },
+      });
+      const { address, state, pin_code, phone_no,  } = req.body;
       const Creator = Address.belongsTo(User, { as: "addresses" });
       const newAddress = await Address.create(
         {
-          userId: userToken.userId,
+          userId: user.id,
           address,
           state,
           pin_code,
