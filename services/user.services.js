@@ -23,7 +23,7 @@ exports.loginService = async (req, res) => {
   return { access_token, refreshToken };
 };
 
-exports.registerService = async (req) => {
+exports.registerService = async (req,res) => {
   try {
     const errors = validationResult(req.body);
     if (!errors.isEmpty()) {
@@ -32,6 +32,8 @@ exports.registerService = async (req) => {
     }
 
     const { userName, password, email, firstName, lastName } = req.body;
+    // const user=await User.findOne({userName})
+   
     const salt = 10;
     const hashpassword = await bcrypt.hash(password, salt);
 
@@ -42,6 +44,7 @@ exports.registerService = async (req) => {
       firstName,
       lastName,
     });
+    // return false
   } catch (error) {
     console.error(error.message);
   }

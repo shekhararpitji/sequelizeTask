@@ -5,11 +5,18 @@ const {
 } = require("../services/user.services");
 const { client } = require("../config/redis.config");
 const { User } = require("../models");
-const { validateToken } = require("../utils/authUtil");
+const { validateToken, createToken } = require("../utils/authUtil");
+const { emails } = require("../utils/emailUtil");
 
 exports.registerCtrl = async (req, res) => {
   try {
-    await registerService(req);
+    await registerService(req,res);
+    await emails({
+      to:req.body.email,
+      link:"",
+      message:"registered successfully",
+      subject:"User registration"
+    })
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     console.error(error);
@@ -74,3 +81,26 @@ exports.refresh = async (req, res) => {
     res.status(400).send({ message: "invalid refreshToken" });
   }
 };
+
+exports.forgotPassword=async(req,res)=>{
+  try {
+    const email=req.body.email;
+    const existingUser = await User.findOne({where:{email}})
+    if(!existingUser) return res.status(403).send({message:"user not found"})
+    const newToken = createToken(existingUser);
+    await emails({
+      to:req.body.email,
+      link:`http://localhost/user/reset-password/${newToken}`,
+      message:"token for forgot password",
+      subject:"Forgot Password"
+    })
+    res.status(201).send({message:"new token genrated successfully", token:newToken})
+  } catch (error) {
+console.error(error.message)  }
+}
+
+exports.resetToken=async(req,res)=>{
+    const token=req.params.token;
+    const payload = await JWT.verify(token, process.env.SECRET);
+return res.status(200).send({payload,token})
+  }
