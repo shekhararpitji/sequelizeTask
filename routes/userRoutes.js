@@ -18,5 +18,6 @@ router.post("/refresh", userController.refresh);
 
 router.use("/address", require("./addressRoutes"));
 
+router.use("/forgot-password", userController.forgotPassword);
 
 module.exports = router;
